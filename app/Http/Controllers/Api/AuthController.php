@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Models\PasswordReset;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -13,19 +14,33 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\DB;
 
 
 
 class AuthController extends Controller
 {
-    public function getAllUser(){
-        $users = User::all();
-
-        return response()->json([
-            'success' => true,
-            'data' => $users,
-        ]);
+    public function getAllUser(Request $request)
+    {
+        try {
+        $search = $request->input('search');
+        $users = User::query();
+        if ($search) {
+            $users->where('email', 'LIKE', '%' . $search . '%');
+        }
+        $users = $users->paginate(10);
+            return response()->json([
+                'success' => true,
+                'user' => $users,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
+
     public function getUserInfo($user_id)
     {
         $user = User::find($user_id);
@@ -168,6 +183,7 @@ class AuthController extends Controller
             'expires_in' => auth()->factory()->getTTL() * 60,
             'user' => [
                 'id' => $user->id,
+                'role' => $user->role,
                 'name' => $user->name,
                 'email' => $user->email,
                 'created_at' => $user->created_at
@@ -254,18 +270,40 @@ class AuthController extends Controller
         }
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
         try {
-            auth()->logout();
-            return response()->json(['success'=>true,'messages'=>'Người dùng đã đăng xuất!']);
+            $userId = $request->input("userId");
+            $cartItems = $request->input('cart_items');
 
-        } catch (\Throwable $e)
-        {
-            return response()->json(['success'=>true,'messages'=>$e->getMessage()]);
+            // Lấy danh sách prod_id từ request
+            $prodIds = [];
+            foreach ($cartItems as $item) {
+                $prodIds[] = $item['id'];
+            }
 
+            // Xóa các prod_id không có trong request
+            Cart::where('user_id', $userId)
+                ->whereNotIn('prod_id', $prodIds)
+                ->delete();
+
+            foreach ($cartItems as $item) {
+                $prodId = $item['id'];
+                $prodQty = $item['quantity'];
+
+                Cart::updateOrCreate(
+                    ['prod_id' => $prodId, 'user_id' => $userId],
+                    ['prod_qty' => $prodQty]
+                );
+            }
+
+            return response()->json(['success' => true, 'messages' => 'Add to cart successfully.']);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'messages' => $e->getMessage()]);
         }
     }
+
+
 
     public function verificationMail($token)
     {

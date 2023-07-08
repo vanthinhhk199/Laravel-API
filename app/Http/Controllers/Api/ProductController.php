@@ -49,20 +49,23 @@ class ProductController extends Controller
         }
     }
 
-    public function show()
+    public function searchAdminProd(Request $request)
     {
         try {
-            $products =Products::orderBy('id', 'desc')->paginate(10);
-            if($products){
-                return response()->json([
-                    'success'=>true,
-                    'product'=>$products,
-                ]);
+            $search = $request->input('search');
+            $products = Products::query();
+            if ($search) {
+                $products->where('name', 'LIKE', '%' . $search . '%');
             }
+            $products = $products->paginate(10);
+            return response()->json([
+                'success' => true,
+                'product' => $products,
+            ]);
         } catch (Exception $e) {
             return response()->json([
-                'success'=>false,
-                'error'=>$e->getMessage(),
+                'success' => false,
+                'message' => $e->getMessage(),
             ]);
         }
     }

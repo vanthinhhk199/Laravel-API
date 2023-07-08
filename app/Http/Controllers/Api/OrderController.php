@@ -8,14 +8,30 @@ use App\Http\Controllers\Controller;
 
 class OrderController extends Controller
 {
-    public function index( )
+    public function index(Request $request)
     {
-        $orders = Orders::with('orderItems.products')->get();
-        return response()->json([
-            'success'=>true,
-            'order'=> $orders
-        ]);
+        try {
+            $search = $request->input('search');
+            $orders = Orders::query();
+
+            if ($search) {
+                $orders->where('name', 'LIKE', '%' . $search . '%');
+            }
+
+            $orders = $orders->with('orderItems.products')->paginate(10);
+
+            return response()->json([
+                'success' => true,
+                'orders' => $orders,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
+
     public function show($user_id)
     {
         $orders = Orders::with('orderItems.products')->where('user_id', $user_id)->orderByDesc('id')->get();

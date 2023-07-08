@@ -9,14 +9,41 @@ use App\Http\Controllers\Controller;
 
 class CartController extends Controller
 {
+    public function getCartWithProducts($userId)
+    {
+        try {
+            $cart = Cart::where('user_id', $userId)->get();
+
+
+            $cartItems = [];
+            foreach ($cart as $item) {
+                $product = $item->product;
+                $cartItems[] = [
+                    'id' => $item->prod_id,
+                    'product' => $product,
+                    'quantity' => $item->prod_qty,
+
+                ];
+            }
+
+            return response()->json([
+                'user_id' => $userId,
+                'cartItems' => $cartItems
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+
     public function addToCart(Request $request)
     {
-//        try {
+        try {
             $user_id = $request->input('user_id');
             $prod_id = $request->input('idProd');
             $prod_qty = $request->input('quantity');
 
-            $prod_check = Cart::where('id', $prod_id)->first();
+            $prod_check = Cart::where('prod_id', $prod_id)->first();
             if ($prod_check) {
                 $prod_check->prod_qty += $prod_qty;
                 $prod_check->save();
@@ -27,12 +54,18 @@ class CartController extends Controller
                     'prod_qty' => $prod_qty
                 ]);
             }
+
+            // Xóa các idProd không có trong request
+            $ids_in_request = $request->input('idProd');
+            Cart::whereNotIn('prod_id', $ids_in_request)->delete();
+
             return response()->json(['message' => 'Product added to cart successfully'], 200);
-//        }
-//        catch (\Exception $e) {
-//            return response()->json(['error' => 'An error occurred while adding the product to the cart'], 500);
-//        }
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while adding the product to the cart'], 500);
+        }
     }
+
+
 
     public function viewCart($id){
         try {
@@ -55,20 +88,22 @@ class CartController extends Controller
         }
     }
 
-    public function deleteProduct(Request $request){
-        if(isset(auth()->user()->id)){
-            $user_id = auth()->user()->id;
-            $prod_id =$request->input('prod_id');
-
-            if(Cart::where('prod_id',$prod_id)->where('user_id', $user_id)->exists()){
-                $cartItem = Cart::where('prod_id',$prod_id)->where('user_id',  $user_id)->first();
-                $cartItem->delete();
-                return response()->json(['message'=>"Xoá sản phẩm thành công"]);
-            }
-        }else{
-            return response()->json(['message' => "Đăng nhập để tiếp tục"]);
+    public function deleteProduct(Request $request)
+{
+    try {
+        $user_id = $request->input('user_id');
+        $prod_id = $request->input('prod_id');
+        $cartItem = Cart::where('prod_id', $prod_id)->where('user_id', $user_id)->first();
+        if ($cartItem) {
+            $cartItem->delete();
+            return response()->json(['message' => 'Product deleted from cart successfully'], 200);
+        } else {
+            return response()->json(['message' => 'Product not found in cart'], 404);
         }
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'An error occurred while deleting the product from the cart'], 500);
     }
+}
 
     public function updateProduct(Request $request){
 

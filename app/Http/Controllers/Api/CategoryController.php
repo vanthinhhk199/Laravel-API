@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 
 class CategoryController extends Controller
 {
+
     public function index()
     {
         try {
@@ -28,9 +29,31 @@ class CategoryController extends Controller
             ]);
         }
     }
-    
+
+    public function getcateadmin(Request $request)
+    {
+        try {
+            $search = $request->input('search');
+            $categorys = Category::query();
+            if ($search) {
+                $categorys->where('name', 'LIKE', '%' . $search . '%');
+            }
+            $categorys = $categorys->paginate(10);
+            return response()->json([
+                'success' => true,
+                'category' => $categorys,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function create(Request $request)
     {
+
         $validator = Validator::make($request->all(),[
             'name' => 'required|string|max:191',
             'slug' => 'required|string|max:191',
@@ -50,7 +73,7 @@ class CategoryController extends Controller
             $category->name = $request->name;
             $category->slug = $request->slug;
             $category->save();
-            
+
             if($category){
                 return response()->json([
                     'success'=>true,
@@ -107,7 +130,7 @@ class CategoryController extends Controller
                         $file->move('assets/uploads/category/',$filename );
                         $category->image =$filename;
                     }
-                 
+
                 }
                if($request->input('name')){
                 $file =$request->input('name');

@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\TestAuthJWTController;
+
 
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return 'HIHI';
@@ -26,7 +28,7 @@ Route::get('forget-password/{email}', [AuthController::class, 'forgetPassword'])
 
 Route::group(['middleware'=>'api'],function ($routes)
 {
-    Route::get('/user', [AuthController::class, 'getAllUser']);
+    Route::post('/user', [AuthController::class, 'getAllUser']);
     Route::get('/userinfo/{id}', [AuthController::class, 'getUserInfo']);
     Route::put('/user/{user_id}', [AuthController::class , 'updateUserInfo']);
     Route::post('/user/{user_id}/avatar', [AuthController::class , 'uploadAvatar']);
@@ -42,11 +44,17 @@ Route::group(['middleware'=>'api'],function ($routes)
 
 // Category
     Route::get('/categorys',[CategoryController::class,'index']);
-    Route::post('/category',[CategoryController::class,'create']);
     Route::get('/category/{id}',[CategoryController::class,'edit']);
     Route::post('/category/{id}',[CategoryController::class,'update']);
     Route::delete('/category/{id}',[CategoryController::class,'destroy']);
     Route::post('/categorys/{search}',[CategoryController::class,'search']);
+    Route::post('/admin/categorys',[CategoryController::class,'getcateadmin']);
+
+
+Route::middleware('jwt.auth')->group(function () {
+        // Các tuyến đường yêu cầu xác thực
+        Route::post('/category',[CategoryController::class,'create']);
+    });
 
 // Product
     Route::get('/products',[ProductController::class,'index']);
@@ -57,20 +65,21 @@ Route::group(['middleware'=>'api'],function ($routes)
     Route::delete('/product/{id}',[ProductController::class,'destroy']);
     Route::get('/product/search-product/{search}',[ProductController::class,'search']);
 
-    Route::get('/admin/products',[ProductController::class,'show']);
+    Route::post('/admin/products',[ProductController::class,'searchAdminProd']);
 
 
 //Cart
+    Route::get('/carts/products/{userId}',[CartController::class,'getCartWithProducts']);
     Route::get('/cart/get-user/{id}',[CartController::class,'viewCart']);
     Route::post('/cart/add-cart',[CartController::class,'addToCart']);
-    Route::post('/cart/delete-cart',[CartController::class,'deleteProduct']);
+    Route::post('/cart/deleteProduct',[CartController::class,'deleteProduct']);
     Route::put('/cart/update-cart',[CartController::class,'updateProduct']);
     Route::get('/cart/cart-preview/{id}',[CartController::class,'cartCount']);
     Route::get('/cart/total-cart/{id}',[CartController::class,'totalCart']);
 
 
     // ORDER
-    Route::get('/admin/order',[OrderController::class,'index']);
+    Route::post('/admin/order',[OrderController::class,'index']);
     Route::post('/admin/order-status',[OrderController::class,'statusOrderAdmin']);
     Route::delete('/orders/{id}', [OrderController::class, 'deleteOrder']);
     Route::get('/cart/my-order',[OrderController::class,'myOrder']);
